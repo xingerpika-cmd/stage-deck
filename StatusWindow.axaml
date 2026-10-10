@@ -1,0 +1,24 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="StageDeck.StatusWindow"
+        Width="340" Height="400"
+        Title="StageDeck 设置"
+        WindowStartupLocation="CenterScreen"
+        Background="#1E1E24"
+        CanResize="False"
+        ShowInTaskbar="False">
+  <StackPanel Margin="20" Spacing="10">
+    <TextBlock Text="StageDeck" FontSize="18" FontWeight="Bold" Foreground="White" />
+    <TextBlock x:Name="StatusText" Text="运行中" Foreground="#888" FontSize="12" />
+    <Separator Background="#444" />
+    <TextBlock Text="卡片大小" Foreground="#AAA" FontSize="12" />
+    <Slider x:Name="SizeSlider" Minimum="80" Maximum="260" Width="280" />
+    <TextBlock x:Name="SizeLabel" Text="128px" Foreground="#6CF" FontSize="12" />
+    <Separator Background="#444" />
+    <TextBlock Text="Ctrl+Alt+S  切换台前调度" Foreground="#666" FontSize="11" />
+    <TextBlock Text="Ctrl+Alt+O  显示设置" Foreground="#666" FontSize="11" />
+    <TextBlock Text="Ctrl+Alt+Q  退出" Foreground="#666" FontSize="11" />
+    <Button x:Name="HideButton" Content="隐藏设置窗口" HorizontalAlignment="Left" Margin="0,5,0,0" />
+    <Button x:Name="QuitButton" Content="退出软件" HorizontalAlignment="Left" Margin="0,5,0,0" Background="#C44" Foreground="White" />
+  </StackPanel>
+</Window>
