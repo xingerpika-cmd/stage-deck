@@ -99,12 +99,16 @@ public class StageManager
         _eventDelegate = OnWinEvent;
         _watchThread = new Thread(() =>
         {
+            // SHOW/HIDE + FOREGROUND变化
             _eventHook = User32.SetWinEventHook(
+                0x0003, 0x0003, // EVENT_SYSTEM_FOREGROUND
+                IntPtr.Zero, _eventDelegate, 0, 0,
+                0x0002);
+            var hook2 = User32.SetWinEventHook(
                 0x8002, 0x8003, // EVENT_OBJECT_SHOW, EVENT_OBJECT_HIDE
                 IntPtr.Zero, _eventDelegate, 0, 0,
-                0x0002); // WINEVENT_OUTOFCONTEXT
+                0x0002);
             Console.WriteLine($"[StageDeck] Window watch started, hook=0x{_eventHook.ToInt64():X}");
-            // 消息循环
             var msg = new User32.MSG();
             while (User32.GetMessage(out msg, IntPtr.Zero, 0, 0) > 0) { }
         });
@@ -127,11 +131,33 @@ public class StageManager
         int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
     {
         if (idObject != 0) return;
-        if (hWnd == _ourHwnd) return;
 
         var currentPid = Environment.ProcessId;
-        User32.GetWindowThreadProcessId(hWnd, out uint pid);
-        if (pid == currentPid) return;
+
+        // 前台窗口变化
+        if (eventType == 0x0003) // EVENT_SYSTEM_FOREGROUND
+        {
+            var fg = User32.GetForegroundWindow();
+            if (fg == _ourHwnd) return;
+            User32.GetWindowThreadProcessId(fg, out uint pid);
+            if (pid == currentPid) return;
+
+            lock (_lock)
+            {
+                var win = _allWindows.FirstOrDefault(w => w.Handle == fg);
+                if (win != null && fg != _mainWindow)
+                {
+                    Console.WriteLine($"[StageDeck] Foreground changed to '{win.Title}'");
+                    _mainWindow = fg;
+                }
+            }
+            RefreshSidebar();
+            return;
+        }
+
+        if (hWnd == _ourHwnd) return;
+        User32.GetWindowThreadProcessId(hWnd, out uint pid2);
+        if (pid2 == currentPid) return;
 
         if (eventType == 0x8002) // SHOW
         {
@@ -144,13 +170,7 @@ public class StageManager
                     _allWindows.Add(info);
                 }
                 Console.WriteLine($"[StageDeck] New window: '{info.Title}'");
-                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-                {
-                    List<WindowInfo> others;
-                    lock (_lock)
-                        others = _allWindows.ToList();
-                    OnWindowsChanged?.Invoke(others);
-                });
+                RefreshSidebar();
             }
         }
         else if (eventType == 0x8003) // HIDE
@@ -162,14 +182,19 @@ public class StageManager
                 _allWindows.Remove(existing);
                 Console.WriteLine($"[StageDeck] Window closed: '{existing.Title}'");
             }
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
-            {
-                List<WindowInfo> others;
-                lock (_lock)
-                    others = _allWindows.Where(w => w.Handle != _mainWindow).ToList();
-                OnWindowsChanged?.Invoke(others);
-            });
+            RefreshSidebar();
         }
+    }
+
+    private void RefreshSidebar()
+    {
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            List<WindowInfo> list;
+            lock (_lock)
+                list = _allWindows.ToList();
+            OnWindowsChanged?.Invoke(list);
+        });
     }
 
     private static IntPtr FindDefView()
@@ -235,10 +260,8 @@ public class StageManager
         User32.AnimateWindow(targetHwnd, 250, User32.AW_BLEND | User32.AW_ACTIVATE);
 
         _mainWindow = targetHwnd;
-
-        var others = _allWindows.Where(w => w.Handle != _mainWindow).ToList();
-        OnWindowsChanged?.Invoke(others);
-        Console.WriteLine($"[StageDeck] Switched to 0x{targetHwnd.ToInt64():X}, others={others.Count}");
+        OnWindowsChanged?.Invoke(_allWindows.ToList());
+        Console.WriteLine($"[StageDeck] Switched to 0x{targetHwnd.ToInt64():X}");
     }
 
     public IntPtr GetMainWindow() => _mainWindow;
