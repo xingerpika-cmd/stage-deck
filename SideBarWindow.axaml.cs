@@ -4,7 +4,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Media;
-using Avalonia.Media.Transformation;
 using Avalonia.Threading;
 using StageDeck.Core;
 using StageDeck.Native;
@@ -18,17 +17,15 @@ public partial class SideBarWindow : Window
     private List<WindowInfo> _currentWindows = new();
 
     private int CardWidth = Settings.CardSize;
-    private int CardHeight => (int)(CardWidth * 0.7);
+    private int CardHeight => (int)(CardWidth * 0.56);
     private const int CardGap = 6;
-    private const int CardsTop = 42;
     private const int CardMarginX = 6;
-    private int ThumbHeight => (int)(CardWidth * 0.53);
+    private int ThumbHeight => CardHeight;
 
     public void ResizeCards(double factor)
     {
         CardWidth = (int)(CardWidth * factor);
         ApplySize();
-        Console.WriteLine($"[SideBar] Resized: {CardWidth}x{CardHeight}, thumb={ThumbHeight}");
         LayoutThumbnails();
     }
 
@@ -60,11 +57,9 @@ public partial class SideBarWindow : Window
         _manager = manager;
         InitializeComponent();
 
-        int sw = User32.GetSystemMetrics(User32.SM_CXSCREEN);
-        int sh = User32.GetSystemMetrics(User32.SM_CYSCREEN);
         Position = new PixelPoint(0, 0);
         Width = CardWidth + 16;
-        Height = sh;
+        Height = User32.GetSystemMetrics(User32.SM_CYSCREEN);
 
         _manager.OnWindowsChanged += OnWindowsChanged;
         _manager.OnStateChanged += OnStateChanged;
@@ -80,11 +75,11 @@ public partial class SideBarWindow : Window
             {
                 Show();
                 RenderTransform = new TranslateTransform(0, 0);
-                int sh = User32.GetSystemMetrics(User32.SM_CYSCREEN);
                 var hwnd = GetHwnd();
                 if (hwnd != IntPtr.Zero)
                 {
-                    User32.SetWindowPos(hwnd, IntPtr.Zero, 0, 0, CardWidth + 16, sh,
+                    User32.SetWindowPos(hwnd, IntPtr.Zero, 0, 0, CardWidth + 16,
+                        User32.GetSystemMetrics(User32.SM_CYSCREEN),
                         User32.SWP_NOACTIVATE | User32.SWP_SHOWWINDOW);
                 }
                 StartMouseWatch();
@@ -155,8 +150,9 @@ public partial class SideBarWindow : Window
 
             IntPtr destHwnd = GetHwnd();
             int idx = 0;
+            var normalBrush = new SolidColorBrush(Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF));
+            var hoverBrush = new SolidColorBrush(Color.FromArgb(0xA0, 0x4A, 0x9E, 0xFF));
 
-            // 垂直居中：计算卡片总高度
             int count = _currentWindows.Count;
             int totalH = count * CardHeight + Math.Max(0, count - 1) * CardGap;
             int screenH = User32.GetSystemMetrics(User32.SM_CYSCREEN);
@@ -166,8 +162,6 @@ public partial class SideBarWindow : Window
 
             foreach (var info in _currentWindows)
             {
-                var normalBrush = new SolidColorBrush(Color.FromArgb(0x30, 0xFF, 0xFF, 0xFF));
-                var hoverBrush = new SolidColorBrush(Color.FromArgb(0xA0, 0x4A, 0x9E, 0xFF));
                 var card = new Border
                 {
                     Width = CardWidth,
@@ -176,24 +170,12 @@ public partial class SideBarWindow : Window
                     Background = Brushes.Transparent,
                     BorderBrush = new SolidColorBrush(Color.FromArgb(0x20, 0xFF, 0xFF, 0xFF)),
                     BorderThickness = new Thickness(1),
-                    Child = new StackPanel
-                    {
-                        Children =
-                        {
-                            new Border { Height = ThumbHeight, Background = Brushes.Transparent },
-                            new Border {
-                                Background = new SolidColorBrush(Color.FromArgb(0x80, 0x00, 0x00, 0x00)),
-                                Child = new TextBlock { Text = info.Title, Foreground = new SolidColorBrush(Color.FromArgb(0xE0, 0xFF,0xFF,0xFF)), FontSize = 10, TextTrimming = TextTrimming.CharacterEllipsis, Margin = new Thickness(8,4,8,4) }
-                            }
-                        }
-                    }
                 };
 
-                // DWM 缩略图
-                IntPtr thumbId = IntPtr.Zero;
+                // DWM 实时缩略图
                 try
                 {
-                    if (DwmApi.DwmRegisterThumbnail(destHwnd, info.Handle, out thumbId) == 0)
+                    if (DwmApi.DwmRegisterThumbnail(destHwnd, info.Handle, out var thumbId) == 0)
                     {
                         _thumbnails[info.Handle] = thumbId;
                         int top = centerTop + idx * (CardHeight + CardGap);
@@ -203,13 +185,12 @@ public partial class SideBarWindow : Window
                         {
                             dwFlags = DwmApi.DWM_TNP_RECTDESTINATION | DwmApi.DWM_TNP_VISIBLE | DwmApi.DWM_TNP_OPACITY,
                             rcDestination = normalRect,
-                            opacity = 220,
+                            opacity = 230,
                             fVisible = 1,
                             fSourceClientAreaOnly = 1,
                         };
                         DwmApi.DwmUpdateThumbnailProperties(thumbId, ref ptp);
 
-                        // hover 放大动画：从 normalRect 渐变到 hoverRect
                         var hoverRect = new RECT
                         {
                             Left = normalRect.Left - 6,
@@ -239,7 +220,7 @@ public partial class SideBarWindow : Window
                                 {
                                     dwFlags = DwmApi.DWM_TNP_RECTDESTINATION,
                                     rcDestination = r,
-                                    opacity = (byte)(220 + (255 - 220) * eased),
+                                    opacity = (byte)(230 + (255 - 230) * eased),
                                     fVisible = 1,
                                     fSourceClientAreaOnly = 1,
                                 };
@@ -269,7 +250,6 @@ public partial class SideBarWindow : Window
                 var target = info;
                 card.PointerPressed += (_, e) =>
                 {
-                    Console.WriteLine($"[SideBar] Card clicked: '{target.Handle:X}' '{target.Title}'");
                     if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
                     {
                         _manager.SwitchTo(target.Handle);
