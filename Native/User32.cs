@@ -148,6 +148,63 @@ public static class User32
     public const int SM_CXSCREEN = 0;
     public const int SM_CYSCREEN = 1;
 
+    [DllImport("user32.dll")]
+    public static extern bool PrintWindow(IntPtr hWnd, IntPtr hBltDC, uint nFlags);
+
+    public const uint PW_CLIENTONLY = 0x1;
+    public const uint PW_RENDERFULLCONTENT = 0x2;
+
     public const uint MOD_CONTROL = 0x0002;
     public const uint MOD_ALT = 0x0001;
+
+    public const uint WM_GETICON = 0x007F;
+    public const uint ICON_SMALL = 0;
+    public const uint ICON_BIG = 1;
+    public const uint ICON_SMALL2 = 2;
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern bool DestroyIcon(IntPtr hIcon);
+
+    [DllImport("user32.dll", EntryPoint = "GetClassLongPtrW")]
+    public static extern IntPtr GetClassLongPtrW(IntPtr hWnd, int nIndex);
+
+    public const int GCL_HICON = -14;
+    public const int GCL_HICONSM = -34;
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes,
+        ref SHFILEINFO psfi, uint cbFileInfo, uint uFlags);
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    public struct SHFILEINFO
+    {
+        public IntPtr hIcon;
+        public int iIcon;
+        public uint dwAttributes;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+        public string szDisplayName;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
+        public string szTypeName;
+    }
+
+    public const uint SHGFI_ICON = 0x100;
+    public const uint SHGFI_LARGEICON = 0x0;
+    public const uint SHGFI_SMALLICON = 0x1;
+    public const uint SHGFI_USEFILEATTRIBUTES = 0x10;
+    public const uint SHGFI_ICONLOCATION = 0x1000;
+
+    [DllImport("psapi.dll")]
+    public static extern uint GetModuleFileNameEx(IntPtr hProcess, IntPtr hModule, StringBuilder lpFilename, int nSize);
+
+    [DllImport("kernel32.dll")]
+    public static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, uint dwProcessId);
+
+    [DllImport("kernel32.dll")]
+    public static extern bool CloseHandle(IntPtr hObject);
+
+    public const uint PROCESS_QUERY_INFORMATION = 0x0400;
+    public const uint PROCESS_VM_READ = 0x0010;
 }
