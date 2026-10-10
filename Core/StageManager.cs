@@ -88,7 +88,7 @@ public class StageManager
         IsActive = true;
         SetDesktopIcons(false);
         OnStateChanged?.Invoke();
-        OnWindowsChanged?.Invoke(_allWindows.Where(w => w.Handle != _mainWindow).ToList());
+        OnWindowsChanged?.Invoke(_allWindows.ToList());
         StartWindowWatch();
         Console.WriteLine($"[StageDeck] Entered, main=0x{_mainWindow.ToInt64():X}, windows={_allWindows.Count}");
     }
@@ -148,7 +148,7 @@ public class StageManager
                 {
                     List<WindowInfo> others;
                     lock (_lock)
-                        others = _allWindows.Where(w => w.Handle != _mainWindow).ToList();
+                        others = _allWindows.ToList();
                     OnWindowsChanged?.Invoke(others);
                 });
             }
