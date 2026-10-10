@@ -1,0 +1,22 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="StageDeck.SideBarWindow"
+        Width="140" Height="600"
+        WindowStartupLocation="Manual"
+        Position="0,0"
+        SystemDecorations="None"
+        ShowInTaskbar="False"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        Opacity="1">
+  <Panel>
+    <ScrollViewer VerticalScrollBarVisibility="Hidden">
+      <StackPanel x:Name="CardsPanel" Spacing="8" Margin="8,44,8,12" />
+    </ScrollViewer>
+    <StackPanel VerticalAlignment="Top" Margin="12,14,0,0" Orientation="Horizontal" Spacing="6">
+      <Border Width="6" Height="6" CornerRadius="3" Background="#4A9EFF" VerticalAlignment="Center" />
+      <TextBlock Text="STAGEDECK" Foreground="#888" FontSize="10" FontWeight="Bold"
+                 FontFamily="Segoe UI" VerticalAlignment="Center" />
+    </StackPanel>
+  </Panel>
+</Window>
